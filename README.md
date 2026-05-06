@@ -1,6 +1,6 @@
 # Fluxion
 
-A basic offline Electron app shell with React, Vite, and TypeScript.
+100% vibe coded fractal flame generator in Electron
 
 ## Scripts
 
