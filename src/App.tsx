@@ -372,6 +372,9 @@ function drawWebGlPreview(canvas: HTMLCanvasElement | null, project: FlameProjec
   gl.uniform1f(gl.getUniformLocation(program, "zoom"), project.zoom);
   gl.uniform1f(gl.getUniformLocation(program, "rotation"), project.rotation * Math.PI / 180);
   gl.uniform2f(gl.getUniformLocation(program, "center"), project.centerX, project.centerY);
+  gl.uniform1f(gl.getUniformLocation(program, "exposure"), project.exposure);
+  gl.uniform1f(gl.getUniformLocation(program, "gamma"), project.gamma);
+  gl.uniform1f(gl.getUniformLocation(program, "vibrance"), project.vibrance);
   gl.uniform1i(gl.getUniformLocation(program, "transformCount"), transforms.length);
   gl.uniform3f(gl.getUniformLocation(program, "background"), project.background[0] / 255, project.background[1] / 255, project.background[2] / 255);
   gl.uniform3fv(gl.getUniformLocation(program, "palette"), new Float32Array(project.palette.filter((_, i) => i % 32 === 0).flatMap(([r, g, b]) => [r / 255, g / 255, b / 255])));
@@ -417,6 +420,9 @@ uniform float seed;
 uniform float progress;
 uniform float zoom;
 uniform float rotation;
+uniform float exposure;
+uniform float gamma;
+uniform float vibrance;
 uniform vec2 center;
 uniform int orbitSteps;
 uniform int transformCount;
@@ -435,6 +441,13 @@ vec3 pickPalette(float t) {
   float x = clamp(t, 0.0, 0.999) * 7.0;
   int i = int(floor(x));
   return mix(palette[i], palette[min(i + 1, 7)], smoothstep(0.0, 1.0, fract(x)));
+}
+
+vec3 applyLighting(vec3 color) {
+  float luma = dot(color, vec3(0.2126, 0.7152, 0.0722));
+  color = mix(vec3(luma), color, 0.65 + vibrance);
+  color *= exposure;
+  return pow(clamp(color, 0.0, 1.0), vec3(1.0 / max(0.1, gamma)));
 }
 
 int chooseTransform(float value) {
@@ -516,7 +529,7 @@ void main() {
   gl_Position = vec4(clip, 0.0, 1.0);
   gl_PointSize = 1.0;
   float alpha = 0.018 / max(0.12, sqrt(progress));
-  sampleColor = vec4(pickPalette(color) * alpha, alpha);
+  sampleColor = vec4(applyLighting(pickPalette(color)) * alpha, alpha);
 }`;
 
 const fragmentShader = `#version 300 es
